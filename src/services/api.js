@@ -98,4 +98,9 @@ export const adminAPI = {
     api.patch(`/admin/users/${userId}/toggle-active`),
 };
 
+// Payment APIs
+export const paymentAPI = {
+  initiate: (data) => api.post("/payments/pay", data),
+};
+
 export default api;

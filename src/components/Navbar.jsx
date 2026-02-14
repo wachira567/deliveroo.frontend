@@ -22,7 +22,9 @@ const Navbar = () => {
             {user ? (
               <>
                 <span className="text-sm">
-                  {user.full_name} ({user.role})
+                  <Link to="/profile" className="hover:text-orange-200 font-bold">
+                    {user.full_name} ({user.role})
+                  </Link>
                 </span>
 
                 {isCustomer && (

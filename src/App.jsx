@@ -9,6 +9,7 @@ import OrdersList from "./pages/OrdersList";
 import OrderDetail from "./pages/OrderDetail";
 import CourierOrders from "./pages/CourierOrders";
 import AdminDashboard from "./pages/AdminDashboard";
+import Profile from "./pages/Profile";
 
 const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -58,6 +59,15 @@ const App = () => {
           element={
             <ProtectedRoute roles={["customer"]}>
               <CreateOrder />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

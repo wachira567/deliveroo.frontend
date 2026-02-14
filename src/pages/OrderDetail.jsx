@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { orderAPI } from "../services/api";
+import { orderAPI, paymentAPI } from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import OrderMap from "../components/OrderMap";
@@ -227,21 +227,38 @@ const OrderDetail = () => {
 
             {/* Actions */}
             {isCustomer && order.status === "pending" && (
-              <div className="mt-6 flex gap-4">
+              <div className="mt-6 space-y-4">
                 <button
-                  onClick={() =>
-                    setShowUpdateDestination(!showUpdateDestination)
-                  }
-                  className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+                  onClick={async () => {
+                      const toastId = toast.loading("Initiating M-Pesa payment...");
+                      try {
+                          await paymentAPI.initiate({ order_id: order.id });
+                          toast.success("Payment request sent! Check your phone.", { id: toastId });
+                      } catch (error) {
+                          toast.error(error.response?.data?.error || "Payment failed", { id: toastId });
+                      }
+                  }}
+                  className="w-full bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 shadow-md flex items-center justify-center gap-2"
                 >
-                  Update Destination
+                  <span>💳</span> Pay with M-Pesa (KES {order.price})
                 </button>
-                <button
-                  onClick={handleCancelOrder}
-                  className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
-                >
-                  Cancel Order
-                </button>
+
+                <div className="flex gap-4">
+                    <button
+                    onClick={() =>
+                        setShowUpdateDestination(!showUpdateDestination)
+                    }
+                    className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+                    >
+                    Update Destination
+                    </button>
+                    <button
+                    onClick={handleCancelOrder}
+                    className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+                    >
+                    Cancel Order
+                    </button>
+                </div>
               </div>
             )}
 

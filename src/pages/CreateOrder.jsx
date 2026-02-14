@@ -1,21 +1,37 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import { orderAPI } from "../services/api";
 import toast from "react-hot-toast";
+
+const libraries = ["places"];
 
 const CreateOrder = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries,
+  });
+
+  const [distance, setDistance] = useState(null);
+  const [duration, setDuration] = useState(null);
+  const [price, setPrice] = useState(null);
+  
+  const pickupRef = useRef(null);
+  const destinationRef = useRef(null);
+
   const [formData, setFormData] = useState({
     parcel_name: "",
     description: "",
     weight: "",
     pickup_address: "",
     destination_address: "",
-    pickup_lat: "",
-    pickup_lng: "",
-    destination_lat: "",
-    destination_lng: "",
+    pickup_lat: null,
+    pickup_lng: null,
+    destination_lat: null,
+    destination_lng: null,
   });
 
   const handleChange = (e) => {
@@ -24,6 +40,42 @@ const CreateOrder = () => {
       [e.target.name]: e.target.value,
     });
   };
+
+  const onPlaceChanged = (ref, type) => {
+    if (ref.current) {
+        const place = ref.current.getPlace();
+        if (place && place.geometry) {
+            setFormData(prev => ({
+                ...prev,
+                [`${type}_address`]: place.formatted_address,
+                [`${type}_lat`]: place.geometry.location.lat(),
+                [`${type}_lng`]: place.geometry.location.lng(),
+            }));
+        }
+    }
+  };
+
+  useEffect(() => {
+    if (isLoaded && formData.pickup_lat && formData.destination_lat) {
+        const service = new window.google.maps.DistanceMatrixService();
+        service.getDistanceMatrix(
+            {
+                origins: [{ lat: formData.pickup_lat, lng: formData.pickup_lng }],
+                destinations: [{ lat: formData.destination_lat, lng: formData.destination_lng }],
+                travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (response, status) => {
+                if (status === "OK" && response.rows[0].elements[0].status === "OK") {
+                    const element = response.rows[0].elements[0];
+                    const distKm = element.distance.value / 1000;
+                    setDistance(element.distance.text);
+                    setDuration(element.duration.text);
+                    setPrice(Math.max(distKm * 1, 10).toFixed(2)); // Min 10 KSH, 1 KSH/km
+                }
+            }
+        );
+    }
+  }, [formData.pickup_lat, formData.destination_lat, isLoaded]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,18 +88,13 @@ const CreateOrder = () => {
         weight: parseFloat(formData.weight),
         pickup_address: formData.pickup_address,
         destination_address: formData.destination_address,
+        pickup_lat: formData.pickup_lat,
+        pickup_lng: formData.pickup_lng,
+        destination_lat: formData.destination_lat,
+        destination_lng: formData.destination_lng,
+        price: price ? parseFloat(price) : 0,
+        distance: distance 
       };
-
-      // Add coordinates if provided
-      if (formData.pickup_lat && formData.pickup_lng) {
-        data.pickup_lat = parseFloat(formData.pickup_lat);
-        data.pickup_lng = parseFloat(formData.pickup_lng);
-      }
-
-      if (formData.destination_lat && formData.destination_lng) {
-        data.destination_lat = parseFloat(formData.destination_lat);
-        data.destination_lng = parseFloat(formData.destination_lng);
-      }
 
       const response = await orderAPI.create(data);
       toast.success("Order created successfully!");
@@ -59,6 +106,8 @@ const CreateOrder = () => {
 
     setLoading(false);
   };
+
+  if (!isLoaded) return <div className="p-8 text-center">Loading Maps...</div>;
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -80,7 +129,7 @@ const CreateOrder = () => {
                   value={formData.parcel_name}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="e.g., Documents, Electronics, Clothes"
+                  placeholder="e.g., Documents, Electronics"
                   required
                 />
               </div>
@@ -95,7 +144,6 @@ const CreateOrder = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   rows="3"
-                  placeholder="Describe your parcel..."
                 />
               </div>
 
@@ -111,7 +159,6 @@ const CreateOrder = () => {
                   step="0.1"
                   min="0.1"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="e.g., 2.5"
                   required
                 />
               </div>
@@ -121,107 +168,64 @@ const CreateOrder = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Pickup Address *
                   </label>
-                  <input
-                    type="text"
-                    name="pickup_address"
-                    value={formData.pickup_address}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="e.g., 123 Main St, Nairobi"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lat
-                    </label>
+                  <Autocomplete
+                    onLoad={(ref) => (pickupRef.current = ref)}
+                    onPlaceChanged={() => onPlaceChanged(pickupRef, "pickup")}
+                  >
                     <input
-                      type="number"
-                      name="pickup_lat"
-                      value={formData.pickup_lat}
+                      type="text"
+                      name="pickup_address"
+                      value={formData.pickup_address}
                       onChange={handleChange}
-                      step="any"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Optional"
+                      placeholder="Search pickup location"
+                      required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lng
-                    </label>
-                    <input
-                      type="number"
-                      name="pickup_lng"
-                      value={formData.pickup_lng}
-                      onChange={handleChange}
-                      step="any"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Optional"
-                    />
-                  </div>
+                  </Autocomplete>
                 </div>
-              </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Destination Address *
                   </label>
-                  <input
-                    type="text"
-                    name="destination_address"
-                    value={formData.destination_address}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="e.g., 456 Oak Ave, Nairobi"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lat
-                    </label>
+                  <Autocomplete
+                    onLoad={(ref) => (destinationRef.current = ref)}
+                    onPlaceChanged={() => onPlaceChanged(destinationRef, "destination")}
+                  >
                     <input
-                      type="number"
-                      name="destination_lat"
-                      value={formData.destination_lat}
+                      type="text"
+                      name="destination_address"
+                      value={formData.destination_address}
                       onChange={handleChange}
-                      step="any"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Optional"
+                      placeholder="Search destination"
+                      required
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Lng
-                    </label>
-                    <input
-                      type="number"
-                      name="destination_lng"
-                      value={formData.destination_lng}
-                      onChange={handleChange}
-                      step="any"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Optional"
-                    />
-                  </div>
+                  </Autocomplete>
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  💡 <strong>Tip:</strong> You can enter coordinates (lat/lng)
-                  for more accurate tracking. If not provided, we'll geocode the
-                  addresses automatically.
-                </p>
-              </div>
+              {distance && (
+                <div className="bg-blue-50 p-4 rounded-lg flex justify-between items-center text-blue-800">
+                    <div>
+                        <p className="text-sm font-bold">Estimated Distance</p>
+                        <p className="text-lg">{distance}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold">Estimated Time</p>
+                        <p className="text-lg">{duration}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm font-bold">Estimated Price</p>
+                        <p className="text-xl font-bold">KSH {price}</p>
+                    </div>
+                </div>
+              )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 disabled:bg-orange-300"
+                className="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 disabled:bg-orange-300 transition-colors"
               >
                 {loading ? "Creating Order..." : "Create Order"}
               </button>

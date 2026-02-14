@@ -1,151 +1,145 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   GoogleMap,
   useJsApiLoader,
   Marker,
-  Polyline,
-  LoadScript,
+  DirectionsRenderer,
 } from "@react-google-maps/api";
 
-const mapContainerStyle = {
+const containerStyle = {
   width: "100%",
-  height: "400px",
+  height: "500px",
+  borderRadius: "0.5rem",
 };
 
 const defaultCenter = {
-  lat: -1.286389,
+  lat: -1.286389, // Nairobi
   lng: 36.817223,
 };
 
-const mapOptions = {
-  disableDefaultUI: false,
-  zoomControl: true,
-  streetViewControl: false,
-  mapTypeControl: false,
-  fullscreenControl: true,
-};
+// Define libraries outside to verify equal reference
+const libraries = ["places"];
 
-// Component wrapper for loading Google Maps script
-const OrderMapWrapper = ({ order, showRoute = true }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-  if (!apiKey) {
-    return (
-      <div className="w-full h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Google Maps API key not configured</p>
-      </div>
-    );
-  }
-
-  return (
-    <LoadScript googleMapsApiKey={apiKey}>
-      <OrderMap order={order} showRoute={showRoute} />
-    </LoadScript>
-  );
-};
-
-const OrderMap = ({ order, showRoute = true }) => {
-  const [map, setMap] = useState(null);
-  const [center, setCenter] = useState(defaultCenter);
-
+const OrderMap = ({ order }) => {
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries,
   });
 
-  useEffect(() => {
-    if (order?.current_lat && order?.current_lng) {
-      setCenter({ lat: order.current_lat, lng: order.current_lng });
-    } else if (order?.pickup_lat && order?.pickup_lng) {
-      setCenter({ lat: order.pickup_lat, lng: order.pickup_lng });
+  const [map, setMap] = useState(null);
+  const [directionsResponse, setDirectionsResponse] = useState(null);
+
+  // Calculate center based on order
+  const center = useMemo(() => {
+    if (order?.pickup_lat && order?.pickup_lng) {
+      return { lat: order.pickup_lat, lng: order.pickup_lng };
     }
+    return defaultCenter;
   }, [order]);
 
-  const onLoad = useCallback((map) => {
+  useEffect(() => {
+    if (isLoaded && order?.pickup_lat && order?.destination_lat && window.google) {
+       const directionsService = new window.google.maps.DirectionsService();
+       
+       const origin = { lat: order.pickup_lat, lng: order.pickup_lng };
+       const destination = { lat: order.destination_lat, lng: order.destination_lng };
+       
+       directionsService.route(
+         {
+           origin: origin,
+           destination: destination,
+           travelMode: window.google.maps.TravelMode.DRIVING,
+         },
+         (result, status) => {
+           if (status === window.google.maps.DirectionsStatus.OK) {
+             setDirectionsResponse(result);
+           } else {
+             console.error(`Directions request failed due to ${status}`);
+           }
+         }
+       );
+    }
+  }, [isLoaded, order?.pickup_lat, order?.destination_lat, order?.pickup_lng, order?.destination_lng]);
+
+  const onLoad = useCallback(function callback(map) {
     setMap(map);
   }, []);
 
-  const onUnmount = useCallback(() => {
+  const onUnmount = useCallback(function callback(map) {
     setMap(null);
   }, []);
 
-  if (!isLoaded) {
-    return (
-      <div className="w-full h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Loading map...</p>
-      </div>
-    );
-  }
-
-  // Calculate route path
-  const getRoutePath = () => {
-    const path = [];
-
-    if (order?.pickup_lat && order?.pickup_lng) {
-      path.push({ lat: order.pickup_lat, lng: order.pickup_lng });
-    }
-
-    if (order?.current_lat && order?.current_lng) {
-      path.push({ lat: order.current_lat, lng: order.current_lng });
-    }
-
-    if (order?.destination_lat && order?.destination_lng) {
-      path.push({ lat: order.destination_lat, lng: order.destination_lng });
-    }
-
-    return path;
-  };
-
-  const routePath = getRoutePath();
+  if (!isLoaded) return <div className="h-[500px] w-full bg-gray-100 animate-pulse rounded-lg flex items-center justify-center text-gray-400">Loading Map...</div>;
 
   return (
     <GoogleMap
-      mapContainerStyle={mapContainerStyle}
+      mapContainerStyle={containerStyle}
       center={center}
       zoom={13}
-      options={mapOptions}
       onLoad={onLoad}
       onUnmount={onUnmount}
+      options={{
+          zoomControl: true,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: true,
+      }}
     >
+      {/* Show Directions if available */}
+      {directionsResponse && (
+        <DirectionsRenderer
+          directions={directionsResponse}
+          options={{
+              suppressMarkers: true, // We will render our own markers
+              polylineOptions: {
+                  strokeColor: "#F97316", // Orange-500
+                  strokeOpacity: 0.8,
+                  strokeWeight: 6,
+              }
+          }}
+        />
+      )}
+
       {/* Pickup Marker */}
-      {order?.pickup_lat && order?.pickup_lng && (
+      {order?.pickup_lat && (
         <Marker
           position={{ lat: order.pickup_lat, lng: order.pickup_lng }}
-          label="📍"
+          label="P"
           title="Pickup Location"
         />
       )}
 
-      {/* Current Location Marker (Courier) */}
-      {order?.current_lat && order?.current_lng && (
-        <Marker
-          position={{ lat: order.current_lat, lng: order.current_lng }}
-          label="🚗"
-          title="Current Location"
-        />
-      )}
-
       {/* Destination Marker */}
-      {order?.destination_lat && order?.destination_lng && (
+      {order?.destination_lat && (
         <Marker
-          position={{ lat: order.destination_lat, lng: order.destination_lng }}
-          label="🏠"
-          title="Destination"
+            position={{ lat: order.destination_lat, lng: order.destination_lng }}
+            label="D"
+            title="Destination"
         />
       )}
-
-      {/* Route Polyline */}
-      {showRoute && routePath.length > 1 && (
-        <Polyline
-          path={routePath}
-          options={{
-            strokeColor: "#FF6B00",
-            strokeOpacity: 0.8,
-            strokeWeight: 4,
-          }}
-        />
+      
+      {/* Courier Marker */}
+      {order?.current_lat && (
+          <Marker
+            position={{ lat: order.current_lat, lng: order.current_lng }}
+            label="🚗"
+            title="Courier Location"
+            options={{
+                zIndex: 999,
+                icon: {
+                    path: window.google?.maps?.SymbolPath?.CIRCLE,
+                    scale: 10,
+                    fillColor: "#00CCBC",
+                    fillOpacity: 1,
+                    strokeColor: "white",
+                    strokeWeight: 2,
+                }
+            }}
+          />
       )}
     </GoogleMap>
   );
 };
 
-export { OrderMapWrapper as default };
+export default OrderMap;
