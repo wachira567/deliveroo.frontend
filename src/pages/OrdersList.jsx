@@ -113,7 +113,12 @@ const OrdersList = () => {
                     )}
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-2">
+                    {order.payment_status === 'completed' && order.status === 'pending' && (
+                         <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            Paid
+                         </span>
+                    )}
                     <span
                       className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
                     >

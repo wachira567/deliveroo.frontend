@@ -193,11 +193,18 @@ const OrderDetail = () => {
               <h1 className="text-2xl font-bold text-gray-800">
                 Order #{order.id}
               </h1>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
-              >
-                {order.status.replace("_", " ")}
-              </span>
+              <div className="flex gap-2">
+                {order.payment_status === 'completed' && order.status === 'pending' && (
+                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        Paid
+                     </span>
+                )}
+                <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
+                >
+                    {order.status.replace("_", " ")}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-4">
