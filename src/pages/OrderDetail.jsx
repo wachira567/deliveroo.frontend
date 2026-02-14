@@ -238,13 +238,23 @@ const OrderDetail = () => {
 
               {/* Parcel Image */}
               {order.parcel_image_url && (
-                <div className="py-2 border-b">
-                  <span className="text-gray-600 block mb-2">Parcel Image</span>
-                  <img 
-                    src={order.parcel_image_url} 
-                    alt="Parcel" 
-                    className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                  />
+                <div className="py-4 border-b">
+                  <span className="text-gray-700 font-bold block mb-2">Uploaded Parcel Image</span>
+                  <div className="relative group cursor-pointer">
+                    <img 
+                      src={order.parcel_image_url} 
+                      alt="Uploaded Parcel" 
+                      className="w-full h-64 object-cover rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-all"
+                    />
+                     <a href={order.parcel_image_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 transition-all rounded-lg">
+                        <span className="text-white opacity-0 hover:opacity-100 font-medium bg-black bg-opacity-50 px-4 py-2 rounded-full backdrop-blur-sm">
+                            View Full Size
+                        </span>
+                     </a>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                    <span>📷</span> This is the image you uploaded for this order.
+                  </p>
                 </div>
               )}
 
