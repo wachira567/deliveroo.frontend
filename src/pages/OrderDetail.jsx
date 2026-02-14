@@ -43,8 +43,15 @@ const OrderDetail = () => {
       if (response.data.payment_status === 'completed') {
           if (isPolling) {
               setIsPolling(false);
-              toast.success("Payment Received!");
+              toast.success("Payment Received! Sending email...");
+              // Small delay to read the toast then redirect
+              setTimeout(() => {
+                  navigate("/orders");
+              }, 2000);
           }
+      } else if (isPolling && response.data.payment_status === 'failed') {
+          setIsPolling(false);
+          toast.error("Payment failed. Please try again.");
       }
       
       setDestinationForm({
@@ -54,11 +61,19 @@ const OrderDetail = () => {
       });
     } catch (error) {
       const message = error.response?.data?.error || "Failed to fetch order";
-      toast.error(message);
-      navigate("/orders");
-      setIsPolling(false);
+      // Only show error toast if not just a polling background refresh issue? 
+      // Actually we want to know if it fails.
+      console.error(message);
+      if (!isPolling) {
+          toast.error(message);
+          navigate("/orders");
+      }
+      // If polling fails once (e.g. network blip), don't kill polling immediately?
+      // but if 404/403 then yes.
     } finally {
-      setLoading(false);
+      if (!isPolling) {
+        setLoading(false);
+      }
     }
   };
   
@@ -268,13 +283,20 @@ const OrderDetail = () => {
             {isCustomer && order.status === "pending" && order.payment_status !== "completed" && (
               <div className="mt-6 space-y-4">
                 {/* Payment Overlay */}
+                {/* Payment Overlay - Show if polling OR if we are waiting for initial status check */}
                 {isPolling && (
-                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
                         <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
                             <h3 className="text-xl font-bold mb-2">Processing Payment</h3>
                             <p className="text-gray-600 mb-4">Please check your phone and enter your M-Pesa PIN.</p>
-                            <p className="text-sm text-gray-500">Waiting for confirmation...</p>
+                            <p className="text-sm text-gray-400">
+                                Once paid, this screen will update automatically.
+                                <br/>
+                                <button onClick={() => setIsPolling(false)} className="text-red-400 hover:text-red-500 mt-4 underline text-xs">
+                                    Cancel checking
+                                </button>
+                            </p>
                         </div>
                      </div>
                 )}
