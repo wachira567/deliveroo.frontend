@@ -324,6 +324,13 @@ const OrderDetail = () => {
                             toast.error(error.response?.data?.error || "Payment failed", { id: toastId });
                         }
                     }} className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        {/* Show error if payment status is failed */}
+                        {order.payment_status === 'failed' && (
+                            <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+                                <p className="font-bold">Payment Failed</p>
+                                <p>The previous payment verification failed. Please check the number and try again.</p>
+                            </div>
+                        )}
                         <label className="block text-sm font-medium text-green-800 mb-2">
                             Enter M-Pesa Number
                         </label>
