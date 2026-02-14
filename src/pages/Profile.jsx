@@ -3,6 +3,9 @@ import { authAPI, courierAPI } from "../services/api";
 import toast from "react-hot-toast";
 
 const Profile = () => {
+    const [user, setUser] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editForm, setEditForm] = useState({
         full_name: "",
