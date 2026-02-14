@@ -76,17 +76,17 @@ const App = () => {
         <Route
           path="/profile"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["customer", "courier"]}>
               <Profile />
             </ProtectedRoute>
           }
         />
 
-        {/* Common Routes (All authenticated users) */}
+        {/* Common Routes (Customer & Courier) */}
         <Route
           path="/orders"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["customer", "courier"]}>
               <OrdersList />
             </ProtectedRoute>
           }
@@ -94,7 +94,7 @@ const App = () => {
         <Route
           path="/orders/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute roles={["customer", "courier"]}>
               <OrderDetail />
             </ProtectedRoute>
           }
