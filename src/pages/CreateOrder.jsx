@@ -1,34 +1,31 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLoadScript, Autocomplete, GoogleMap, Marker } from "@react-google-maps/api";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import axios from "axios";
 import { orderAPI } from "../services/api";
 import toast from "react-hot-toast";
+import LocationAutocomplete from "../components/LocationAutocomplete";
 
-const libraries = ["places"];
+// Set Mapbox Access Token
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-const defaultCenter = {
-  lat: -1.286389, // Nairobi
-  lng: 36.817223,
-};
+const defaultCenter = [36.817223, -1.286389]; // Nairobi [lng, lat]
 
 const CreateOrder = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries,
-  });
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const pickupMarker = useRef(null);
+  const destinationMarker = useRef(null);
 
   const [distance, setDistance] = useState(null);
   const [duration, setDuration] = useState(null);
   const [price, setPrice] = useState(null);
   const [activeField, setActiveField] = useState('pickup'); // 'pickup' or 'destination'
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
   
-  const pickupRef = useRef(null);
-  const destinationRef = useRef(null);
-
   const [formData, setFormData] = useState({
     parcel_name: "",
     description: "",
@@ -48,69 +45,158 @@ const CreateOrder = () => {
     });
   };
 
-  const onPlaceChanged = (ref, type) => {
-    if (ref.current) {
-        const place = ref.current.getPlace();
-        if (place && place.geometry) {
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            setFormData(prev => ({
-                ...prev,
-                [`${type}_address`]: place.formatted_address,
-                [`${type}_lat`]: lat,
-                [`${type}_lng`]: lng,
-            }));
-            setMapCenter({ lat, lng });
-        }
-    }
+  // Initialize Map
+  useEffect(() => {
+    if (map.current) return; // initialize map only once
+    
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: defaultCenter,
+      zoom: 12
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    
+    map.current.on('click', (e) => {
+        handleMapClick(e.lngLat);
+    });
+
+  }, []);
+
+  const updateMarker = (lngLat, type) => {
+      const { lng, lat } = lngLat;
+      
+      if (type === 'pickup') {
+          if (pickupMarker.current) pickupMarker.current.remove();
+          pickupMarker.current = new mapboxgl.Marker({ color: "#ea580c" }) // Orange-600
+              .setLngLat([lng, lat])
+              .setPopup(new mapboxgl.Popup().setText("Pickup"))
+              .addTo(map.current);
+      } else {
+          if (destinationMarker.current) destinationMarker.current.remove();
+          destinationMarker.current = new mapboxgl.Marker({ color: "#2563eb" }) // Blue-600
+              .setLngLat([lng, lat])
+              .setPopup(new mapboxgl.Popup().setText("Destination"))
+              .addTo(map.current);
+      }
   };
 
-  const handleMapClick = useCallback((e) => {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-      
+  const handleLocationSelect = (data, type) => {
+      const { lat, lng, address } = data;
       setFormData(prev => ({
           ...prev,
-          [`${activeField}_lat`]: lat,
-          [`${activeField}_lng`]: lng,
-          // We ideally should reverse geocode here to get address, 
-          // but for now we'll set a placeholder or keep existing if close?
-          // Let's just set a "Pinned Location" text if address is empty
-          [`${activeField}_address`]: prev[`${activeField}_address`] || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-      }));
-  }, [activeField]);
-
-  const handleMarkerDragEnd = useCallback((e, type) => {
-      const lat = e.latLng.lat();
-      const lng = e.latLng.lng();
-      setFormData(prev => ({
-          ...prev,
+          [`${type}_address`]: address,
           [`${type}_lat`]: lat,
           [`${type}_lng`]: lng,
       }));
-  }, []);
+      
+      updateMarker({ lng, lat }, type);
+      
+      if (map.current) {
+          map.current.flyTo({ center: [lng, lat], zoom: 14 });
+      }
+  };
 
+  const handleMapClick = async (lngLat) => {
+      const { lng, lat } = lngLat;
+      
+      // Reverse geocode to get approximate address
+      let address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      try {
+          const response = await axios.get(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json`,
+              {
+                  params: {
+                      access_token: mapboxgl.accessToken,
+                      limit: 1
+                  }
+              }
+          );
+          if (response.data.features && response.data.features.length > 0) {
+              address = response.data.features[0].place_name;
+          }
+      } catch (error) {
+          console.error("Reverse geocoding failed", error);
+      }
+
+      setFormData(prev => ({
+          ...prev,
+          [`${activeField}_address`]: address,
+          [`${activeField}_lat`]: lat,
+          [`${activeField}_lng`]: lng,
+      }));
+
+      updateMarker({ lng, lat }, activeField);
+  };
+
+  // Calculate Distance
   useEffect(() => {
-    if (isLoaded && formData.pickup_lat && formData.destination_lat) {
-        const service = new window.google.maps.DistanceMatrixService();
-        service.getDistanceMatrix(
-            {
-                origins: [{ lat: formData.pickup_lat, lng: formData.pickup_lng }],
-                destinations: [{ lat: formData.destination_lat, lng: formData.destination_lng }],
-                travelMode: window.google.maps.TravelMode.DRIVING,
-            },
-            (response, status) => {
-                if (status === "OK" && response.rows[0].elements[0].status === "OK") {
-                    const element = response.rows[0].elements[0];
-                    const distKm = element.distance.value / 1000;
-                    setDistance(element.distance.text);
-                    setDuration(element.duration.text);
-                    setPrice(Math.max(distKm * 1, 10).toFixed(2)); // Min 10 KSH, 1 KSH/km
+    const calculateRoute = async () => {
+        if (formData.pickup_lat && formData.destination_lat) {
+            try {
+                const query = await axios.get(
+                    `https://api.mapbox.com/directions/v5/mapbox/driving/${formData.pickup_lng},${formData.pickup_lat};${formData.destination_lng},${formData.destination_lat}`,
+                    {
+                        params: {
+                            access_token: mapboxgl.accessToken,
+                            geometries: 'geojson',
+                            overview: 'full'
+                        }
+                    }
+                );
+
+                if (query.data.routes && query.data.routes.length > 0) {
+                    const route = query.data.routes[0];
+                    const distKm = route.distance / 1000;
+                    const durMins = Math.round(route.duration / 60);
+                    
+                    setDistance(`${distKm.toFixed(1)} km`);
+                    setDuration(durMins > 60 ? `${Math.floor(durMins/60)} hrs ${durMins%60} mins` : `${durMins} mins`);
+                    setPrice(Math.max(distKm * 1, 10).toFixed(2)); // Min 10 KSH
+
+                    // Draw route on map
+                    if (map.current.getSource('route')) {
+                        map.current.getSource('route').setData(route.geometry);
+                    } else {
+                        map.current.addLayer({
+                            id: 'route',
+                            type: 'line',
+                            source: {
+                                type: 'geojson',
+                                data: {
+                                    type: 'Feature',
+                                    properties: {},
+                                    geometry: route.geometry
+                                }
+                            },
+                            layout: {
+                                'line-join': 'round',
+                                'line-cap': 'round'
+                            },
+                            paint: {
+                                'line-color': '#f97316', // Orange
+                                'line-width': 5,
+                                'line-opacity': 0.75
+                            }
+                        });
+                    }
+                    
+                    // Fit bounds
+                    const bounds = new mapboxgl.LngLatBounds();
+                    bounds.extend([formData.pickup_lng, formData.pickup_lat]);
+                    bounds.extend([formData.destination_lng, formData.destination_lat]);
+                    map.current.fitBounds(bounds, { padding: 50 });
                 }
+            } catch (error) {
+                console.error("Error calculating route:", error);
             }
-        );
-    }
-  }, [formData.pickup_lat, formData.destination_lat, isLoaded]);
+        }
+    };
+
+    calculateRoute();
+  }, [formData.pickup_lat, formData.destination_lat]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -141,8 +227,6 @@ const CreateOrder = () => {
 
     setLoading(false);
   };
-
-  if (!isLoaded) return <div className="p-8 text-center">Loading Maps...</div>;
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -203,40 +287,24 @@ const CreateOrder = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Pickup Address *
                   </label>
-                  <Autocomplete
-                    onLoad={(ref) => (pickupRef.current = ref)}
-                    onPlaceChanged={() => onPlaceChanged(pickupRef, "pickup")}
-                  >
-                    <input
-                      type="text"
-                      name="pickup_address"
-                      value={formData.pickup_address}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Search pickup location"
-                      required
-                    />
-                  </Autocomplete>
+                  <LocationAutocomplete 
+                    placeholder="Search pickup location"
+                    onSelect={(data) => handleLocationSelect(data, 'pickup')}
+                    initialValue={formData.pickup_address}
+                  />
+                  {formData.pickup_lat && <p className="text-xs text-green-600 mt-1">Location selected</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Destination Address *
                   </label>
-                  <Autocomplete
-                    onLoad={(ref) => (destinationRef.current = ref)}
-                    onPlaceChanged={() => onPlaceChanged(destinationRef, "destination")}
-                  >
-                    <input
-                      type="text"
-                      name="destination_address"
-                      value={formData.destination_address}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Search destination"
-                      required
-                    />
-                  </Autocomplete>
+                  <LocationAutocomplete 
+                    placeholder="Search destination"
+                    onSelect={(data) => handleLocationSelect(data, 'destination')}
+                    initialValue={formData.destination_address}
+                  />
+                  {formData.destination_lat && <p className="text-xs text-green-600 mt-1">Location selected</p>}
                 </div>
               </div>
 
@@ -269,7 +337,7 @@ const CreateOrder = () => {
         </div>
       </div>
 
-      {/* Map Modal or Section for Pinning */}
+      {/* Map Section for Pinning */}
       <div className="container mx-auto px-4 mt-8">
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-bold mb-4">Select Location on Map</h2>
@@ -290,35 +358,10 @@ const CreateOrder = () => {
                 </button>
             </div>
 
-            <div style={{ height: '400px', width: '100%' }}>
-                <GoogleMap
-                    mapContainerStyle={{ width: '100%', height: '100%' }}
-                    center={mapCenter}
-                    zoom={13}
-                    onClick={handleMapClick}
-                    options={{
-                        streetViewControl: false,
-                        mapTypeControl: false,
-                    }}
-                >
-                    {formData.pickup_lat && (
-                        <Marker 
-                            position={{ lat: formData.pickup_lat, lng: formData.pickup_lng }} 
-                            label="P"
-                            draggable={true}
-                            onDragEnd={(e) => handleMarkerDragEnd(e, 'pickup')}
-                        />
-                    )}
-                    {formData.destination_lat && (
-                        <Marker 
-                            position={{ lat: formData.destination_lat, lng: formData.destination_lng }} 
-                            label="D"
-                            draggable={true}
-                            onDragEnd={(e) => handleMarkerDragEnd(e, 'destination')}
-                        />
-                    )}
-                </GoogleMap>
-            </div>
+            <div 
+                ref={mapContainer} 
+                className="w-full h-[400px] rounded-lg"
+            />
         </div>
       </div>
     </div>
