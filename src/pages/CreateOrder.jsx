@@ -206,10 +206,13 @@ const CreateOrder = () => {
 
 
   const [parcelImage, setParcelImage] = useState(null);
+  const [parcelImagePreview, setParcelImagePreview] = useState(null);
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setParcelImage(e.target.files[0]);
+      const file = e.target.files[0];
+      setParcelImage(file);
+      setParcelImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -302,6 +305,16 @@ const CreateOrder = () => {
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">Upload an image to help the courier identify your parcel.</p>
+                {parcelImagePreview && (
+                  <div className="mt-2">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Preview:</p>
+                    <img 
+                      src={parcelImagePreview} 
+                      alt="Parcel Preview" 
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
