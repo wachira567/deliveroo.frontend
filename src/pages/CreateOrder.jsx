@@ -1,10 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLoadScript, Autocomplete } from "@react-google-maps/api";
+import { useLoadScript, Autocomplete, GoogleMap, Marker } from "@react-google-maps/api";
 import { orderAPI } from "../services/api";
 import toast from "react-hot-toast";
 
 const libraries = ["places"];
+
+const defaultCenter = {
+  lat: -1.286389, // Nairobi
+  lng: 36.817223,
+};
 
 const CreateOrder = () => {
   const navigate = useNavigate();
@@ -18,6 +23,8 @@ const CreateOrder = () => {
   const [distance, setDistance] = useState(null);
   const [duration, setDuration] = useState(null);
   const [price, setPrice] = useState(null);
+  const [activeField, setActiveField] = useState('pickup'); // 'pickup' or 'destination'
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
   
   const pickupRef = useRef(null);
   const destinationRef = useRef(null);
@@ -45,15 +52,43 @@ const CreateOrder = () => {
     if (ref.current) {
         const place = ref.current.getPlace();
         if (place && place.geometry) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
             setFormData(prev => ({
                 ...prev,
                 [`${type}_address`]: place.formatted_address,
-                [`${type}_lat`]: place.geometry.location.lat(),
-                [`${type}_lng`]: place.geometry.location.lng(),
+                [`${type}_lat`]: lat,
+                [`${type}_lng`]: lng,
             }));
+            setMapCenter({ lat, lng });
         }
     }
   };
+
+  const handleMapClick = useCallback((e) => {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      
+      setFormData(prev => ({
+          ...prev,
+          [`${activeField}_lat`]: lat,
+          [`${activeField}_lng`]: lng,
+          // We ideally should reverse geocode here to get address, 
+          // but for now we'll set a placeholder or keep existing if close?
+          // Let's just set a "Pinned Location" text if address is empty
+          [`${activeField}_address`]: prev[`${activeField}_address`] || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+      }));
+  }, [activeField]);
+
+  const handleMarkerDragEnd = useCallback((e, type) => {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setFormData(prev => ({
+          ...prev,
+          [`${type}_lat`]: lat,
+          [`${type}_lng`]: lng,
+      }));
+  }, []);
 
   useEffect(() => {
     if (isLoaded && formData.pickup_lat && formData.destination_lat) {
@@ -231,6 +266,59 @@ const CreateOrder = () => {
               </button>
             </form>
           </div>
+        </div>
+      </div>
+
+      {/* Map Modal or Section for Pinning */}
+      <div className="container mx-auto px-4 mt-8">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold mb-4">Select Location on Map</h2>
+            <p className="text-gray-600 mb-4">Click on the map to set a location. Select which field to update below.</p>
+            
+            <div className="mb-4 flex gap-4">
+                <button 
+                    onClick={() => setActiveField('pickup')}
+                    className={`px-4 py-2 rounded-lg ${activeField === 'pickup' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                >
+                    Set Pickup
+                </button>
+                <button 
+                    onClick={() => setActiveField('destination')}
+                    className={`px-4 py-2 rounded-lg ${activeField === 'destination' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                >
+                    Set Destination
+                </button>
+            </div>
+
+            <div style={{ height: '400px', width: '100%' }}>
+                <GoogleMap
+                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                    center={mapCenter}
+                    zoom={13}
+                    onClick={handleMapClick}
+                    options={{
+                        streetViewControl: false,
+                        mapTypeControl: false,
+                    }}
+                >
+                    {formData.pickup_lat && (
+                        <Marker 
+                            position={{ lat: formData.pickup_lat, lng: formData.pickup_lng }} 
+                            label="P"
+                            draggable={true}
+                            onDragEnd={(e) => handleMarkerDragEnd(e, 'pickup')}
+                        />
+                    )}
+                    {formData.destination_lat && (
+                        <Marker 
+                            position={{ lat: formData.destination_lat, lng: formData.destination_lng }} 
+                            label="D"
+                            draggable={true}
+                            onDragEnd={(e) => handleMarkerDragEnd(e, 'destination')}
+                        />
+                    )}
+                </GoogleMap>
+            </div>
         </div>
       </div>
     </div>
