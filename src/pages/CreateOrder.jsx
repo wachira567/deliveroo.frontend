@@ -45,6 +45,12 @@ const CreateOrder = () => {
     });
   };
 
+  const activeFieldRef = useRef(activeField);
+
+  useEffect(() => {
+      activeFieldRef.current = activeField;
+  }, [activeField]);
+
   // Initialize Map
   useEffect(() => {
     if (map.current) return; // initialize map only once
@@ -100,6 +106,7 @@ const CreateOrder = () => {
 
   const handleMapClick = async (lngLat) => {
       const { lng, lat } = lngLat;
+      const currentActiveField = activeFieldRef.current;
       
       // Reverse geocode to get approximate address
       let address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -122,12 +129,12 @@ const CreateOrder = () => {
 
       setFormData(prev => ({
           ...prev,
-          [`${activeField}_address`]: address,
-          [`${activeField}_lat`]: lat,
-          [`${activeField}_lng`]: lng,
+          [`${currentActiveField}_address`]: address,
+          [`${currentActiveField}_lat`]: lat,
+          [`${currentActiveField}_lng`]: lng,
       }));
 
-      updateMarker({ lng, lat }, activeField);
+      updateMarker({ lng, lat }, currentActiveField);
   };
 
   // Calculate Distance
