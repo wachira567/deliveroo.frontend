@@ -177,7 +177,7 @@ const AdminOrders = () => {
                                             >
                                                 View Details
                                             </Link>
-                                            {order.status === 'pending' && (
+                                            {(order.status === 'pending' || order.status === 'assigned') && (
                                                 <button
                                                     onClick={() => {
                                                         setAssignForm({ orderId: order.id, courierId: "" });

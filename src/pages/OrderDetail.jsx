@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { orderAPI, paymentAPI } from "../services/api";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { orderAPI, paymentAPI, courierAPI } from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import OrderMap from "../components/OrderMap";
@@ -120,6 +122,16 @@ const OrderDetail = () => {
       } catch (error) {
           toast.error(error.response?.data?.error || "Failed to confirm delivery");
       }
+  };
+
+  const handleStatusUpdate = async (status) => {
+    try {
+        await courierAPI.updateStatus(id, { status });
+        toast.success(`Order marked as ${status.replace('_', ' ')}`);
+        fetchOrder();
+    } catch (error) {
+        toast.error(error.response?.data?.error || "Failed to update status");
+    }
   };
 
   const handleUpdateDestination = async (e) => {
@@ -334,7 +346,33 @@ const OrderDetail = () => {
                   </div>
               )}
 
-              {/* Courier Delivery Logic */}
+              {/* Courier Actions: Picked Up & In Transit */}
+              {isCourier && (order.status === 'assigned' || order.status === 'picked_up') && (
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h3 className="font-bold text-blue-800 mb-2">🚚 Update Status</h3>
+                      <p className="text-sm text-blue-700 mb-4">Update the order status as you progress.</p>
+                      
+                      {order.status === 'assigned' && (
+                          <button 
+                              onClick={() => handleStatusUpdate('picked_up')}
+                              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-sm flex items-center justify-center gap-2"
+                          >
+                              <span>📦</span> Mark as Picked Up
+                          </button>
+                      )}
+
+                      {order.status === 'picked_up' && (
+                          <button 
+                              onClick={() => handleStatusUpdate('in_transit')}
+                              className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-bold shadow-sm flex items-center justify-center gap-2"
+                          >
+                              <span>🚀</span> Start Delivery (In Transit)
+                          </button>
+                      )}
+                  </div>
+              )}
+
+              {/* Courier Delivery Logic: Complete Delivery */}
               {isCourier && order.status === 'in_transit' && (
                   <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
                       <h3 className="font-bold text-green-800 mb-2">📝 Complete Delivery</h3>

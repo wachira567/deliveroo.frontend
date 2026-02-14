@@ -15,6 +15,20 @@ const CourierDashboard = () => {
     fetchData();
   }, []);
 
+
+  const handleStatusUpdate = async (status) => {
+    setSubmitting(true);
+    try {
+        await courierAPI.updateStatus(activeOrder.id, { status });
+        toast.success(`Order marked as ${status.replace('_', ' ')}`);
+        fetchData(); // Refresh to show next step
+    } catch (error) {
+        toast.error(error.response?.data?.error || "Failed to update status");
+    } finally {
+        setSubmitting(false);
+    }
+  };
+
   const handleCompleteDelivery = async (e) => {
       e.preventDefault();
       if (!deliveryCode || deliveryCode.length !== 6) {
@@ -146,7 +160,34 @@ const CourierDashboard = () => {
                         </div>
                     </div>
                 </div>
-      <div className="mt-6 flex flex-col gap-4">
+                <div className="mt-6 flex flex-col gap-4">
+                    {/* Status Actions */}
+                    {activeOrder.status === 'assigned' && (
+                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                             <h4 className="font-bold text-blue-800 mb-2 text-sm uppercase tracking-wide">Next Step</h4>
+                             <button 
+                                onClick={() => handleStatusUpdate('picked_up')}
+                                disabled={submitting}
+                                className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold text-sm shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {submitting ? 'Updating...' : '📦 Mark as Picked Up'}
+                            </button>
+                         </div>
+                    )}
+
+                    {activeOrder.status === 'picked_up' && (
+                         <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                             <h4 className="font-bold text-orange-800 mb-2 text-sm uppercase tracking-wide">Next Step</h4>
+                             <button 
+                                onClick={() => handleStatusUpdate('in_transit')}
+                                disabled={submitting}
+                                className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 font-bold text-sm shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {submitting ? 'Updating...' : '🚀 Start Delivery'}
+                            </button>
+                         </div>
+                    )}
+
                     {activeOrder.status === 'in_transit' && (
                         <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                              <h4 className="font-bold text-green-800 mb-2 text-sm uppercase tracking-wide">Complete Delivery</h4>
