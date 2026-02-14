@@ -11,9 +11,11 @@ import CreateOrder from "./pages/CreateOrder";
 import OrdersList from "./pages/OrdersList";
 import OrderDetail from "./pages/OrderDetail";
 import CourierOrders from "./pages/CourierOrders";
+import CourierDashboard from "./pages/CourierDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import AdminLayout from "./layouts/AdminLayout";
+import CourierLayout from "./layouts/CourierLayout";
 import AdminUsers from "./pages/AdminUsers";
 import AdminReports from "./pages/AdminReports";
 import AdminOrders from "./pages/AdminOrders";
@@ -40,8 +42,22 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
+// Component to handle root redirect based on role
+const HomeRedirect = () => {
+    const { user, isAuthenticated, loading } = useAuth();
+    
+    if (loading) return null;
+
+    if (isAuthenticated) {
+        if (user?.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+        if (user?.role === 'courier') return <Navigate to="/courier/dashboard" replace />;
+    }
+    
+    return <Home />;
+};
+
 const App = () => {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -51,12 +67,15 @@ const App = () => {
     );
   }
 
+  // Helper to check if we should show main navbar
+  const showNavbar = !user || user.role === 'customer';
+
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar />
+      {showNavbar && <Navbar />}
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -76,17 +95,17 @@ const App = () => {
         <Route
           path="/profile"
           element={
-            <ProtectedRoute roles={["customer", "courier"]}>
+            <ProtectedRoute roles={["customer"]}>
               <Profile />
             </ProtectedRoute>
           }
         />
 
-        {/* Common Routes (Customer & Courier) */}
+        {/* Shared Order Routes (Customer view) */}
         <Route
           path="/orders"
           element={
-            <ProtectedRoute roles={["customer", "courier"]}>
+            <ProtectedRoute roles={["customer"]}>
               <OrdersList />
             </ProtectedRoute>
           }
@@ -94,7 +113,7 @@ const App = () => {
         <Route
           path="/orders/:id"
           element={
-            <ProtectedRoute roles={["customer", "courier"]}>
+            <ProtectedRoute roles={["customer", "courier", "admin"]}>
               <OrderDetail />
             </ProtectedRoute>
           }
@@ -102,15 +121,18 @@ const App = () => {
 
         {/* Courier Routes */}
         <Route
-          path="/courier/orders"
+          path="/courier"
           element={
             <ProtectedRoute roles={["courier"]}>
-              <CourierOrders />
+              <CourierLayout />
             </ProtectedRoute>
           }
-        />
-
-
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<CourierDashboard />} />
+          <Route path="orders" element={<CourierOrders />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
 
         {/* Admin Routes */}
         <Route

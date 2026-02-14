@@ -2,14 +2,11 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { courierAPI } from "../services/api";
 import toast from "react-hot-toast";
-import OrderMap from "../components/OrderMap";
+import { MapPin, Package, Clock, ArrowRight } from "lucide-react";
 
 const CourierOrders = () => {
   const [orders, setOrders] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [locationForm, setLocationForm] = useState({ lat: "", lng: "" });
 
   useEffect(() => {
     fetchData();
@@ -17,43 +14,13 @@ const CourierOrders = () => {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, statsRes] = await Promise.all([
-        courierAPI.getAssignedOrders(),
-        courierAPI.getStats(),
-      ]);
-      setOrders(ordersRes.data.orders);
-      setStats(statsRes.data);
+      const response = await courierAPI.getAssignedOrders();
+      setOrders(response.data.orders);
     } catch (error) {
-      const message = error.response?.data?.error || "Failed to fetch data";
+      const message = error.response?.data?.error || "Failed to fetch orders";
       toast.error(message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpdateLocation = async (orderId) => {
-    try {
-      await courierAPI.updateLocation(orderId, {
-        lat: parseFloat(locationForm.lat),
-        lng: parseFloat(locationForm.lng),
-      });
-      toast.success("Location updated successfully");
-      fetchData();
-    } catch (error) {
-      const message =
-        error.response?.data?.error || "Failed to update location";
-      toast.error(message);
-    }
-  };
-
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    try {
-      await courierAPI.updateStatus(orderId, { status: newStatus });
-      toast.success(`Status updated to ${newStatus}`);
-      fetchData();
-    } catch (error) {
-      const message = error.response?.data?.error || "Failed to update status";
-      toast.error(message);
     }
   };
 
@@ -71,179 +38,106 @@ const CourierOrders = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 py-8">
-        <div className="container mx-auto px-4">
-          <div className="text-center py-12">
-            <p className="text-gray-500">Loading...</p>
-          </div>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">My Deliveries</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">My Deliveries</h1>
+        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+          {orders.length} Assigned
+        </span>
+      </div>
 
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <p className="text-3xl font-bold text-orange-500">
-                {stats.total_orders}
-              </p>
-              <p className="text-gray-600">Total</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <p className="text-3xl font-bold text-green-500">
-                {stats.delivered_orders}
-              </p>
-              <p className="text-gray-600">Delivered</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <p className="text-3xl font-bold text-orange-500">
-                {stats.in_transit_orders}
-              </p>
-              <p className="text-gray-600">In Transit</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <p className="text-3xl font-bold text-blue-500">
-                KES {stats.earnings}
-              </p>
-              <p className="text-gray-600">Earnings</p>
-            </div>
+      <div className="grid gap-6">
+        {orders.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-dashed border-gray-300">
+            <Package size={48} className="mx-auto text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-800 mb-2">No Deliveries Assigned</h3>
+            <p className="text-gray-500">You don't have any orders assigned to you right now.</p>
           </div>
-        )}
+        ) : (
+          orders.map((order) => (
+            <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                   {/* Image Thumbnail */}
+                   <div className="w-full md:w-48 flex-shrink-0">
+                      {order.parcel_image_url ? (
+                        <img 
+                            src={order.parcel_image_url} 
+                            alt={order.parcel_name}
+                            className="w-full h-32 object-cover rounded-lg bg-gray-100"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+                            <Package size={32} />
+                        </div>
+                      )}
+                   </div>
 
-        {/* Orders List */}
-        <div className="grid gap-4">
-          {orders.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-              <p className="text-gray-500 text-lg">
-                No deliveries assigned yet
-              </p>
-            </div>
-          ) : (
-            orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow-lg p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">
-                      #{order.id} - {order.parcel_name}
-                    </h3>
-                    <p className="text-gray-600">
-                      📦 {order.weight}kg • {order.weight_category}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
-                  >
-                    {order.status.replace("_", " ")}
-                  </span>
-                </div>
+                   {/* Order Info */}
+                   <div className="flex-1">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                #{order.id} - {order.parcel_name}
+                            </h3>
+                            <p className="text-sm text-gray-500">{order.weight}kg • {order.weight_category}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(order.status)}`}>
+                            {order.status.replace("_", " ")}
+                        </span>
+                      </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-gray-500 text-sm">Pickup</p>
-                    <p className="font-medium">{order.pickup_address}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Destination</p>
-                    <p className="font-medium">{order.destination_address}</p>
-                  </div>
-                </div>
+                      <div className="grid md:grid-cols-2 gap-4 mt-4">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-1 text-orange-500"><MapPin size={16} /></div>
+                            <div>
+                                <p className="text-xs text-gray-400 uppercase font-semibold">Pickup</p>
+                                <p className="text-gray-700 text-sm line-clamp-2">{order.pickup_address}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="mt-1 text-blue-500"><MapPin size={16} /></div>
+                            <div>
+                                <p className="text-xs text-gray-400 uppercase font-semibold">Destination</p>
+                                <p className="text-gray-700 text-sm line-clamp-2">{order.destination_address}</p>
+                            </div>
+                        </div>
+                      </div>
+                      
+                      {order.created_at && (
+                          <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
+                              <Clock size={14} />
+                              <span>Posted {new Date(order.created_at).toLocaleString()}</span>
+                          </div>
+                      )}
+                   </div>
 
-                {order.customer && (
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500 text-sm">Customer</p>
-                    <p className="font-medium">{order.customer.full_name}</p>
-                    <p className="text-gray-600 text-sm">
-                      {order.customer.phone}
-                    </p>
-                  </div>
-                )}
-
-                {/* Map */}
-                {selectedOrder === order.id && (
-                  <div className="mb-4">
-                    <OrderMap order={order} />
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() =>
-                      setSelectedOrder(
-                        selectedOrder === order.id ? null : order.id,
-                      )
-                    }
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-                  >
-                    {selectedOrder === order.id ? "Hide Map" : "Show Map"}
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                          setLocationForm({
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                          });
-                          toast.success(
-                            'Location captured! Click "Update Location" to save.',
-                          );
-                        },
-                        (error) => toast.error("Failed to get location"),
-                      )
-                    }
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    📍 Get GPS
-                  </button>
-
-                  {locationForm.lat && locationForm.lng && (
-                    <button
-                      onClick={() => handleUpdateLocation(order.id)}
-                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                    >
-                      Update Location
-                    </button>
-                  )}
-
-                  {order.status === "assigned" && (
-                    <button
-                      onClick={() => handleUpdateStatus(order.id, "picked_up")}
-                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
-                    >
-                      Mark Picked Up
-                    </button>
-                  )}
-
-                  {order.status === "picked_up" && (
-                    <button
-                      onClick={() => handleUpdateStatus(order.id, "in_transit")}
-                      className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-                    >
-                      Start Transit
-                    </button>
-                  )}
-
-                  {order.status === "in_transit" && (
-                    <button
-                      onClick={() => handleUpdateStatus(order.id, "delivered")}
-                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                    >
-                      Mark Delivered
-                    </button>
-                  )}
+                   {/* Actions */}
+                   <div className="flex flex-col justify-center items-end border-l pl-6 border-gray-100">
+                        <Link 
+                            to={`/orders/${order.id}`}
+                            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-colors font-medium shadow-sm whitespace-nowrap"
+                        >
+                            View Details <ArrowRight size={16} />
+                        </Link>
+                        {order.status === 'in_transit' && (
+                            <p className="mt-2 text-xs text-orange-600 font-medium animate-pulse">
+                                ● In Transit
+                            </p>
+                        )}
+                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
