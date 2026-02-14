@@ -81,17 +81,7 @@ const Login = () => {
             </Link>
           </p>
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500 text-center mb-2">
-              Demo Accounts
-            </p>
-            <div className="text-xs text-gray-600 space-y-1">
-              <p>Customer: customer@test.com / password123</p>
-              <p>Courier: courier@test.com / password123</p>
-              <p>Admin: admin@test.com / password123</p>
-            </div>
-          </div>
+          {/* Demo accounts removed */}
         </div>
       </div>
     </div>
