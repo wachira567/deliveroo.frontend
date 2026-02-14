@@ -14,6 +14,7 @@ const OrderDetail = () => {
   const [showUpdateDestination, setShowUpdateDestination] = useState(false);
   const [showMpesaPrompt, setShowMpesaPrompt] = useState(false);
   const [mpesaNumber, setMpesaNumber] = useState("");
+  const [isPolling, setIsPolling] = useState(false);
   const [destinationForm, setDestinationForm] = useState({
     destination_address: "",
     destination_lat: "",
@@ -22,12 +23,30 @@ const OrderDetail = () => {
 
   useEffect(() => {
     fetchOrder();
-  }, [id]);
+    
+    // Poll for updates if polling is active
+    let interval;
+    if (isPolling) {
+        interval = setInterval(() => {
+            fetchOrder();
+        }, 5000); // Check every 5 seconds
+    }
+    return () => clearInterval(interval);
+  }, [id, isPolling]);
 
   const fetchOrder = async () => {
     try {
       const response = await orderAPI.getById(id);
       setOrder(response.data);
+      
+      // Stop polling if payment is completed
+      if (response.data.payment_status === 'completed') {
+          if (isPolling) {
+              setIsPolling(false);
+              toast.success("Payment Received!");
+          }
+      }
+      
       setDestinationForm({
         destination_address: response.data.destination_address || "",
         destination_lat: response.data.destination_lat || "",
@@ -37,10 +56,28 @@ const OrderDetail = () => {
       const message = error.response?.data?.error || "Failed to fetch order";
       toast.error(message);
       navigate("/orders");
+      setIsPolling(false);
     } finally {
       setLoading(false);
     }
   };
+  
+  // Watch order updates to stop polling
+  useEffect(() => {
+      // If we are polling and order status changes or we detect success (needs API support)
+      // Since we don't have payment status in GET /orders/:id response explicitly as 'paid'
+      // We can check if any notification says "Payment received"
+      // But notifications are separate.
+      // Let's just poll for 60 seconds then stop.
+      
+      if (isPolling) {
+          const timer = setTimeout(() => {
+              setIsPolling(false);
+              toast("Payment check timed out. Please refresh if you paid.", { icon: "ℹ️" });
+          }, 60000);
+          return () => clearTimeout(timer);
+      }
+  }, [isPolling]);
 
   const handleCancelOrder = async () => {
     if (!window.confirm("Are you sure you want to cancel this order?")) {
@@ -228,8 +265,20 @@ const OrderDetail = () => {
             )}
 
             {/* Actions */}
-            {isCustomer && order.status === "pending" && (
+            {isCustomer && order.status === "pending" && order.payment_status !== "completed" && (
               <div className="mt-6 space-y-4">
+                {/* Payment Overlay */}
+                {isPolling && (
+                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white p-8 rounded-lg shadow-xl text-center max-w-sm mx-4">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                            <h3 className="text-xl font-bold mb-2">Processing Payment</h3>
+                            <p className="text-gray-600 mb-4">Please check your phone and enter your M-Pesa PIN.</p>
+                            <p className="text-sm text-gray-500">Waiting for confirmation...</p>
+                        </div>
+                     </div>
+                )}
+                
                 {!showMpesaPrompt ? (
                     <button
                     onClick={() => setShowMpesaPrompt(true)}
@@ -242,12 +291,13 @@ const OrderDetail = () => {
                         e.preventDefault();
                         const toastId = toast.loading("Initiating M-Pesa payment...");
                         try {
-                            await paymentAPI.initiate({ 
+                            const res = await paymentAPI.initiate({ 
                                 order_id: order.id,
                                 phone_number: mpesaNumber 
                             });
-                            toast.success("Payment request sent! Check your phone.", { id: toastId });
+                            toast.success("Requests sent! Check your phone.", { id: toastId });
                             setShowMpesaPrompt(false);
+                            setIsPolling(true); // Start polling
                         } catch (error) {
                             toast.error(error.response?.data?.error || "Payment failed", { id: toastId });
                         }
