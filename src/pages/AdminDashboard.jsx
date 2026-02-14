@@ -177,12 +177,12 @@ const AdminDashboard = () => {
                         </div>
                         
                         <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="text-xs border border-blue-200 text-blue-600 px-2 py-1 rounded hover:bg-blue-50"
-                        >
-                            View Map
-                        </button>
+                                            <Link 
+                                                to={`/admin/orders/${order.id}`}
+                                                className="text-xs border border-gray-200 text-gray-600 px-2 py-1 rounded hover:bg-gray-50"
+                                            >
+                                                Details
+                                            </Link>
                         {order.status === "pending" && (
                             <button
                             onClick={() => {

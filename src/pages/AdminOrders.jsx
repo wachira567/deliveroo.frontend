@@ -172,7 +172,7 @@ const AdminOrders = () => {
                                         
                                         <div className="mt-4 flex gap-2">
                                             <Link 
-                                                to={`/orders/${order.id}`}
+                                                to={`/admin/orders/${order.id}`}
                                                 className="text-sm px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
                                             >
                                                 View Details
