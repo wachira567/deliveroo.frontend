@@ -126,6 +126,7 @@ const App = () => {
           <Route path="users" element={<AdminUsers />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
         {/* Catch all */}

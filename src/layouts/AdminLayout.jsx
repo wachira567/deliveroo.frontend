@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, BarChart3, Menu, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Package, BarChart3, Menu, X, LogOut, User } from 'lucide-react';
 
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -18,6 +18,7 @@ const AdminLayout = () => {
     { path: '/admin/orders', icon: Package, label: 'Orders' },
     { path: '/admin/users', icon: Users, label: 'Users' },
     { path: '/admin/reports', icon: BarChart3, label: 'Reports' },
+    { path: '/admin/profile', icon: User, label: 'Profile' },
   ];
 
   const handleLogout = () => {

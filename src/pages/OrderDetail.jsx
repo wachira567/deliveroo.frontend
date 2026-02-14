@@ -8,7 +8,7 @@ import OrderMap from "../components/OrderMap";
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCustomer, isCourier } = useAuth();
+  const { isCustomer, isCourier, isAdmin } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showUpdateDestination, setShowUpdateDestination] = useState(false);
@@ -182,10 +182,10 @@ const OrderDetail = () => {
           <div className="text-center py-12">
             <p className="text-gray-500">Order not found</p>
             <Link
-              to="/orders"
+              to={isAdmin ? "/admin/orders" : "/orders"}
               className="text-orange-500 hover:text-orange-600 mt-4 inline-block"
             >
-              Back to Orders
+              Back to {isAdmin ? "Admin Orders" : "Orders"}
             </Link>
           </div>
         </div>
@@ -197,8 +197,8 @@ const OrderDetail = () => {
     <div className="min-h-screen bg-gray-100 py-8">
       <div className="container mx-auto px-4">
         <div className="mb-6">
-          <Link to="/orders" className="text-orange-500 hover:text-orange-600">
-            ← Back to Orders
+          <Link to={isAdmin ? "/admin/orders" : "/orders"} className="text-orange-500 hover:text-orange-600">
+            ← Back to {isAdmin ? "Admin Orders" : "Orders"}
           </Link>
         </div>
 

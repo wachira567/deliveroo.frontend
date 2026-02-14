@@ -5,6 +5,8 @@ const Navbar = () => {
   const { user, isCustomer, isCourier, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
 
+  if (isAdmin) return null;
+
   const handleLogout = () => {
     logout();
     navigate("/login");
