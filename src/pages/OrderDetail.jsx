@@ -122,13 +122,19 @@ const OrderDetail = () => {
       }
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleStatusUpdate = async (status) => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
         await courierAPI.updateStatus(id, { status });
         toast.success(`Order marked as ${status.replace('_', ' ')}`);
         fetchOrder();
     } catch (error) {
         toast.error(error.response?.data?.error || "Failed to update status");
+    } finally {
+        setSubmitting(false);
     }
   };
 
@@ -353,18 +359,20 @@ const OrderDetail = () => {
                       {order.status === 'assigned' && (
                           <button 
                               onClick={() => handleStatusUpdate('picked_up')}
-                              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-sm flex items-center justify-center gap-2"
+                              disabled={submitting}
+                              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
                           >
-                              <span>📦</span> Mark as Picked Up
+                              {submitting ? 'Updating...' : '📦 Mark as Picked Up'}
                           </button>
                       )}
 
                       {order.status === 'picked_up' && (
                           <button 
                               onClick={() => handleStatusUpdate('in_transit')}
-                              className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-bold shadow-sm flex items-center justify-center gap-2"
+                              disabled={submitting}
+                              className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
                           >
-                              <span>🚀</span> Start Delivery (In Transit)
+                              {submitting ? 'Updating...' : '🚀 Start Delivery (In Transit)'}
                           </button>
                       )}
                   </div>
