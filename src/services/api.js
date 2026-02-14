@@ -62,7 +62,9 @@ export const authAPI = {
   register: (data) => api.post("/register", data),
   login: (data) => api.post("/login", data),
   logout: () => api.post("/logout"),
+  logout: () => api.post("/logout"),
   getMe: () => api.get("/me"),
+  updateProfile: (data) => api.put("/me", data),
   verifyEmail: (token) => 
     api.post("/verify-email", {}, {
       headers: { Authorization: `Bearer ${token}` }

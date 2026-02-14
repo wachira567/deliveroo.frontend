@@ -39,13 +39,13 @@ const AdminLayout = () => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-6 border-b">
+          <div className="h-16 flex items-center justify-between px-6 border-b flex-shrink-0">
             <Link to="/admin/dashboard" className="text-xl font-bold text-orange-600">
               Deliveroo Admin
             </Link>
@@ -58,7 +58,7 @@ const AdminLayout = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -81,7 +81,7 @@ const AdminLayout = () => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t flex-shrink-0">
             <button
               onClick={handleLogout}
               className="flex items-center gap-3 px-4 py-3 w-full text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -94,9 +94,9 @@ const AdminLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64 transition-all duration-300">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white shadow-sm h-16 flex items-center px-4">
+        <header className="lg:hidden bg-white shadow-sm h-16 flex items-center px-4 flex-shrink-0 sticky top-0 z-10">
           <button 
             onClick={() => setIsSidebarOpen(true)}
             className="text-gray-600 hover:text-gray-900"
