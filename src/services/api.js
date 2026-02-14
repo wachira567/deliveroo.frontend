@@ -63,6 +63,15 @@ export const authAPI = {
   login: (data) => api.post("/login", data),
   logout: () => api.post("/logout"),
   getMe: () => api.get("/me"),
+  verifyEmail: (token) => 
+    api.post("/verify-email", {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }),
+  forgotPassword: (email) => api.post("/forgot-password", { email }),
+  resetPassword: (token, password) => 
+    api.post("/reset-password", { password }, {
+      headers: { Authorization: `Bearer ${token}` }
+    }),
 };
 
 // Order APIs
