@@ -109,6 +109,22 @@ const OrderDetail = () => {
     }
   };
 
+  const [deliveryCode, setDeliveryCode] = useState("");
+
+  const handleCompleteDelivery = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.post(`${import.meta.env.VITE_API_URL}/orders/${id}/complete`, 
+              { code: deliveryCode },
+              { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+          );
+          toast.success("Delivery confirmed successfully!");
+          fetchOrder();
+      } catch (error) {
+          toast.error(error.response?.data?.error || "Failed to confirm delivery");
+      }
+  };
+
   const handleUpdateDestination = async (e) => {
     e.preventDefault();
 
@@ -220,6 +236,18 @@ const OrderDetail = () => {
                 </div>
               )}
 
+              {/* Parcel Image */}
+              {order.parcel_image_url && (
+                <div className="py-2 border-b">
+                  <span className="text-gray-600 block mb-2">Parcel Image</span>
+                  <img 
+                    src={order.parcel_image_url} 
+                    alt="Parcel" 
+                    className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+
               <div className="flex justify-between py-2 border-b">
                 <span className="text-gray-600">Weight</span>
                 <span className="font-medium">
@@ -287,6 +315,42 @@ const OrderDetail = () => {
             )}
 
             {/* Actions */}
+            
+             {/* Delivery Code for Customer */}
+              {isCustomer && order.delivery_code && (order.status === 'in_transit' || order.status === 'assigned' || order.status === 'pending') && (
+                  <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <h3 className="font-bold text-yellow-800 mb-2">🔐 Delivery Confirmation Code</h3>
+                      <p className="text-sm text-yellow-700 mb-2">Share this code with the courier ONLY when they arrive to deliver your parcel.</p>
+                      <div className="text-center py-2 bg-white rounded border border-yellow-300">
+                          <span className="text-2xl font-mono font-bold tracking-widest text-gray-800">{order.delivery_code}</span>
+                      </div>
+                  </div>
+              )}
+
+              {/* Courier Delivery Logic */}
+              {isCourier && order.status === 'in_transit' && (
+                  <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h3 className="font-bold text-green-800 mb-2">📝 Complete Delivery</h3>
+                      <p className="text-sm text-green-700 mb-4">Ask the customer for the delivery code to confirm handover.</p>
+                      <form onSubmit={handleCompleteDelivery} className="flex gap-2">
+                          <input 
+                              type="text" 
+                              value={deliveryCode}
+                              onChange={(e) => setDeliveryCode(e.target.value)}
+                              placeholder="Enter 6-digit code"
+                              maxLength={6}
+                              className="flex-1 px-4 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 font-mono text-center tracking-widest"
+                              required
+                          />
+                          <button 
+                              type="submit"
+                              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold shadow-sm"
+                          >
+                              Verify & Compute
+                          </button>
+                      </form>
+                  </div>
+              )}
             {isCustomer && order.status === "pending" && order.payment_status !== "completed" && (
               <div className="mt-6 space-y-4">
                 {/* Payment Overlay */}

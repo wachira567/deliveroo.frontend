@@ -205,26 +205,37 @@ const CreateOrder = () => {
   }, [formData.pickup_lat, formData.destination_lat]);
 
 
+  const [parcelImage, setParcelImage] = useState(null);
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setParcelImage(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const data = {
-        parcel_name: formData.parcel_name,
-        description: formData.description,
-        weight: parseFloat(formData.weight),
-        pickup_address: formData.pickup_address,
-        destination_address: formData.destination_address,
-        pickup_lat: formData.pickup_lat,
-        pickup_lng: formData.pickup_lng,
-        destination_lat: formData.destination_lat,
-        destination_lng: formData.destination_lng,
-        price: price ? parseFloat(price) : 0,
-        distance: distance 
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('parcel_name', formData.parcel_name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('weight', parseFloat(formData.weight));
+      formDataToSend.append('pickup_address', formData.pickup_address);
+      formDataToSend.append('destination_address', formData.destination_address);
+      if (formData.pickup_lat) formDataToSend.append('pickup_lat', formData.pickup_lat);
+      if (formData.pickup_lng) formDataToSend.append('pickup_lng', formData.pickup_lng);
+      if (formData.destination_lat) formDataToSend.append('destination_lat', formData.destination_lat);
+      if (formData.destination_lng) formDataToSend.append('destination_lng', formData.destination_lng);
+      formDataToSend.append('price', price ? parseFloat(price) : 0);
+      formDataToSend.append('distance', distance ? parseFloat(distance.split(' ')[0]) : 5.0);
 
-      const response = await orderAPI.create(data);
+      if (parcelImage) {
+        formDataToSend.append('parcel_image', parcelImage);
+      }
+
+      const response = await orderAPI.create(formDataToSend);
       toast.success("Order created successfully!");
       navigate(`/orders/${response.data.order.id}`);
     } catch (error) {
@@ -271,6 +282,19 @@ const CreateOrder = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   rows="3"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Parcel Image (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Upload an image to help the courier identify your parcel.</p>
               </div>
 
               <div>
