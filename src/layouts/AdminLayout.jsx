@@ -5,7 +5,7 @@ import { LayoutDashboard, Users, Package, BarChart3, Menu, X, LogOut, User } fro
 const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   // Simple role check - in a real app decode token or use context
   // Assuming if they are here, route protection handled it, but good to be safe
 
@@ -22,8 +22,8 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
     window.location.href = '/login';
   };
 

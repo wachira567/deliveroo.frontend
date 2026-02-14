@@ -21,14 +21,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem("accessToken");
+    const token = sessionStorage.getItem("accessToken");
     if (token) {
       try {
         const response = await authAPI.getMe();
         setUser(response.data);
       } catch (error) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
+        sessionStorage.removeItem("accessToken");
+        sessionStorage.removeItem("refreshToken");
       }
     }
     setLoading(false);
@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login({ email, password });
       const { user, access_token, refresh_token } = response.data;
 
-      localStorage.setItem("accessToken", access_token);
-      localStorage.setItem("refreshToken", refresh_token);
+      sessionStorage.setItem("accessToken", access_token);
+      sessionStorage.setItem("refreshToken", refresh_token);
       setUser(user);
 
       toast.success(`Welcome back, ${user.full_name}!`);
@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.register(userData);
       const { user, access_token, refresh_token } = response.data;
 
-      localStorage.setItem("accessToken", access_token);
-      localStorage.setItem("refreshToken", refresh_token);
+      sessionStorage.setItem("accessToken", access_token);
+      sessionStorage.setItem("refreshToken", refresh_token);
       setUser(user);
 
       toast.success("Registration successful!");
@@ -76,8 +76,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // Continue with logout even if API call fails
     }
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("refreshToken");
     setUser(null);
     toast.success("Logged out successfully");
   };

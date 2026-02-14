@@ -116,7 +116,7 @@ const OrderDetail = () => {
       try {
           await axios.post(`${import.meta.env.VITE_API_URL}/orders/${id}/complete`, 
               { code: deliveryCode },
-              { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+              { headers: { Authorization: `Bearer ${sessionStorage.getItem('accessToken')}` } }
           );
           toast.success("Delivery confirmed successfully!");
           fetchOrder();
