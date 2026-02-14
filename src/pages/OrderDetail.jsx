@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
 import { orderAPI, paymentAPI, courierAPI } from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
