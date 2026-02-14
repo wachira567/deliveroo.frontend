@@ -217,6 +217,12 @@ const CreateOrder = () => {
     e.preventDefault();
     setLoading(true);
 
+    if (!parcelImage) {
+        toast.error("Please upload a parcel image");
+        setLoading(false);
+        return;
+    }
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('parcel_name', formData.parcel_name);
@@ -286,13 +292,14 @@ const CreateOrder = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Parcel Image (Optional)
+                  Parcel Image *
                 </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  required
                 />
                 <p className="text-xs text-gray-500 mt-1">Upload an image to help the courier identify your parcel.</p>
               </div>
