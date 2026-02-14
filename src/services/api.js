@@ -105,6 +105,9 @@ export const adminAPI = {
     api.patch(`/admin/orders/${orderId}/status`, { status }),
   toggleUserActive: (userId) =>
     api.patch(`/admin/users/${userId}/toggle-active`),
+  getReports: () => api.get("/admin/reports"),
+  changeUserRole: (userId, role) =>
+    api.patch(`/admin/users/${userId}/role`, { role }),
 };
 
 // Payment APIs

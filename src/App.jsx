@@ -13,6 +13,10 @@ import OrderDetail from "./pages/OrderDetail";
 import CourierOrders from "./pages/CourierOrders";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminUsers from "./pages/AdminUsers";
+import AdminReports from "./pages/AdminReports";
+import AdminOrders from "./pages/AdminOrders";
 
 const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -106,15 +110,23 @@ const App = () => {
           }
         />
 
+
+
         {/* Admin Routes */}
         <Route
-          path="/admin/dashboard"
+          path="/admin"
           element={
             <ProtectedRoute roles={["admin"]}>
-              <AdminDashboard />
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="reports" element={<AdminReports />} />
+        </Route>
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
