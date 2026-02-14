@@ -12,6 +12,8 @@ const OrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showUpdateDestination, setShowUpdateDestination] = useState(false);
+  const [showMpesaPrompt, setShowMpesaPrompt] = useState(false);
+  const [mpesaNumber, setMpesaNumber] = useState("");
   const [destinationForm, setDestinationForm] = useState({
     destination_address: "",
     destination_lat: "",
@@ -228,20 +230,59 @@ const OrderDetail = () => {
             {/* Actions */}
             {isCustomer && order.status === "pending" && (
               <div className="mt-6 space-y-4">
-                <button
-                  onClick={async () => {
-                      const toastId = toast.loading("Initiating M-Pesa payment...");
-                      try {
-                          await paymentAPI.initiate({ order_id: order.id });
-                          toast.success("Payment request sent! Check your phone.", { id: toastId });
-                      } catch (error) {
-                          toast.error(error.response?.data?.error || "Payment failed", { id: toastId });
-                      }
-                  }}
-                  className="w-full bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 shadow-md flex items-center justify-center gap-2"
-                >
-                  <span>💳</span> Pay with M-Pesa (KES {order.price})
-                </button>
+                {!showMpesaPrompt ? (
+                    <button
+                    onClick={() => setShowMpesaPrompt(true)}
+                    className="w-full bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 shadow-md flex items-center justify-center gap-2"
+                    >
+                    <span>💳</span> Pay with M-Pesa (KES {order.price})
+                    </button>
+                ) : (
+                    <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const toastId = toast.loading("Initiating M-Pesa payment...");
+                        try {
+                            await paymentAPI.initiate({ 
+                                order_id: order.id,
+                                phone_number: mpesaNumber 
+                            });
+                            toast.success("Payment request sent! Check your phone.", { id: toastId });
+                            setShowMpesaPrompt(false);
+                        } catch (error) {
+                            toast.error(error.response?.data?.error || "Payment failed", { id: toastId });
+                        }
+                    }} className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <label className="block text-sm font-medium text-green-800 mb-2">
+                            Enter M-Pesa Number
+                        </label>
+                        <div className="flex gap-2">
+                             <input 
+                                type="text" 
+                                value={mpesaNumber}
+                                onChange={(e) => setMpesaNumber(e.target.value)}
+                                placeholder="e.g. 0712345678"
+                                className="flex-1 px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                                required
+                            />
+                            <button 
+                                type="submit"
+                                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
+                            >
+                                Pay
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setShowMpesaPrompt(false)}
+                                className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                        <p className="text-xs text-green-600 mt-2">
+                            Enter your phone number in format 07... or 01...
+                        </p>
+                    </form>
+                )}
 
                 <div className="flex gap-4">
                     <button
