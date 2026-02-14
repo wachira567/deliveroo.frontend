@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { courierAPI } from "../services/api";
+import { courierAPI, orderAPI } from "../services/api";
 import toast from "react-hot-toast";
 import { Package, Truck, DollarSign, CheckCircle } from "lucide-react";
 
@@ -8,10 +8,31 @@ const CourierDashboard = () => {
   const [stats, setStats] = useState(null);
   const [activeOrder, setActiveOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deliveryCode, setDeliveryCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleCompleteDelivery = async (e) => {
+      e.preventDefault();
+      if (!deliveryCode || deliveryCode.length !== 6) {
+          toast.error("Please enter a valid 6-digit code");
+          return;
+      }
+      setSubmitting(true);
+      try {
+          await orderAPI.completeDelivery(activeOrder.id, deliveryCode);
+          toast.success("Delivery confirmed successfully! Great job! 🎉");
+          setDeliveryCode("");
+          fetchData(); // Refresh data to update UI
+      } catch (error) {
+          toast.error(error.response?.data?.error || "Failed to confirm delivery");
+      } finally {
+          setSubmitting(false);
+      }
+  };
 
   const fetchData = async () => {
     try {
@@ -125,13 +146,39 @@ const CourierDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="mt-6 flex justify-end">
-                    <Link 
-                        to={`/courier/orders`}
-                        className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 font-medium transition-colors shadow-sm"
-                    >
-                        Manage Delivery
-                    </Link>
+      <div className="mt-6 flex flex-col gap-4">
+                    {activeOrder.status === 'in_transit' && (
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                             <h4 className="font-bold text-green-800 mb-2 text-sm uppercase tracking-wide">Complete Delivery</h4>
+                             <p className="text-xs text-green-700 mb-3">Ask customer for the 6-digit code.</p>
+                             <form onSubmit={handleCompleteDelivery} className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={deliveryCode}
+                                    onChange={(e) => setDeliveryCode(e.target.value)}
+                                    placeholder="Code"
+                                    maxLength={6}
+                                    className="w-24 px-3 py-2 border border-green-300 rounded focus:ring-2 focus:ring-green-500 font-mono text-center tracking-widest"
+                                    required
+                                />
+                                <button 
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold text-sm shadow-sm disabled:opacity-50 flex-1"
+                                >
+                                    {submitting ? 'Verifying...' : 'Confirm'}
+                                </button>
+                             </form>
+                        </div>
+                    )}
+                    <div className="flex justify-end">
+                        <Link 
+                            to={`/orders/${activeOrder.id}`}
+                            className="text-orange-600 hover:text-orange-800 font-medium text-sm flex items-center gap-1"
+                        >
+                            View Full Details &rarr;
+                        </Link>
+                    </div>
                 </div>
             </div>
          </div>

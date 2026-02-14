@@ -80,6 +80,7 @@ export const orderAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   updateDestination: (id, data) => api.patch(`/orders/${id}/destination`, data),
   cancel: (id) => api.delete(`/orders/${id}`),
+  completeDelivery: (id, code) => api.post(`/orders/${id}/complete`, { code }),
 };
 
 // Courier APIs
