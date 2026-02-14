@@ -214,12 +214,14 @@ const Home = () => {
               <h2 className="text-3xl md:text-5xl font-bold mb-6">Ready to ship your package?</h2>
               <p className="text-gray-300 text-xl mb-10">Join thousands of happy customers using Deliveroo today.</p>
               
-              <Link
-                to="/register"
-                className="inline-block bg-orange-500 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-600 transition hover:shadow-lg hover:shadow-orange-500/30"
-              >
-                Sign Up Now
-              </Link>
+              {!isAuthenticated && (
+                <Link
+                  to="/register"
+                  className="inline-block bg-orange-500 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-600 transition hover:shadow-lg hover:shadow-orange-500/30"
+                >
+                  Sign Up Now
+                </Link>
+              )}
               <p className="mt-6 text-gray-400 text-sm">No credit card required for sign up.</p>
            </div>
         </div>
